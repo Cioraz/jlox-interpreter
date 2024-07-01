@@ -16,7 +16,7 @@ fn run_file(path: &str) -> Result<(), String> {
 
 // To run the source code of the jlox file
 fn run(source: &str) -> Result<(), String> {
-    let scanner = Scanner::new(source);
+    let mut scanner = Scanner::new(source);
     let tokens = scanner.scan_tokens()?;
 
     for token in tokens {
