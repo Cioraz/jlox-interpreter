@@ -29,8 +29,6 @@ impl Scanner {
     // Another func for adding tokens where literal is also mentioned
     fn add_token_lit(self: &mut Self,token_type: TokenType, literal: Option<Object>) {
         let text = &self.source[self.start..self.current];
-        let token_type = &token_type;
-        let literal = &literal;
         self.tokens.push(Token{
             token_type: token_type.clone(),
             lexeme: text.to_string(),
@@ -44,15 +42,51 @@ impl Scanner {
         let character = self.advance();
         match character{
             '(' => self.add_token(TokenType::LeftParen),
-            ')' => self.add_token(crate::token::TokenType::RightParen),
-            '{' => self.add_token(crate::token::TokenType::LeftBrace),
-            '}' => self.add_token(crate::token::TokenType::RightBrace),
-            ',' => self.add_token(crate::token::TokenType::Comma),
-            '.' => self.add_token(crate::token::TokenType::Dot),
-            '-' => self.add_token(crate::token::TokenType::Minus),
-            '+' => self.add_token(crate::token::TokenType::Plus),
-            ';' => self.add_token(crate::token::TokenType::Semicolon),
-            '*' => self.add_token(crate::token::TokenType::Star),
+            ')' => self.add_token(TokenType::RightParen),
+            '{' => self.add_token(TokenType::LeftBrace),
+            '}' => self.add_token(TokenType::RightBrace),
+            ',' => self.add_token(TokenType::Comma),
+            '.' => self.add_token(TokenType::Dot),
+            '-' => self.add_token(TokenType::Minus),
+            '+' => self.add_token(TokenType::Plus),
+            ';' => self.add_token(TokenType::Semicolon),
+            '*' => self.add_token(TokenType::Star),
+            '!' => {
+                match self.source.chars().nth(self.current) {
+                    Some('=') => {
+                        self.current+=1;
+                        self.add_token(TokenType::BangEqual);
+                    }
+                    _ => self.add_token(TokenType::Bang),
+                }
+            },
+            '=' => {
+                match self.source.chars().nth(self.current) {
+                    Some('=') => {
+                        self.current+=1;
+                        self.add_token(TokenType::EqualEqual);
+                    }
+                    _ => self.add_token(TokenType::Equal),
+                }
+            },
+            '<' => {
+                match self.source.chars().nth(self.current) {
+                    Some('=') => {
+                        self.current+=1;
+                        self.add_token(TokenType::LessEqual);
+                    }
+                    _ => self.add_token(TokenType::Less),
+                }
+            },
+            '>' => {
+                match self.source.chars().nth(self.current) {
+                    Some('=') => {
+                        self.current+=1;
+                        self.add_token(TokenType::GreaterEqual);
+                    }
+                    _ => self.add_token(TokenType::Greater),
+                }
+            },
             _ => Err(format!("Unexpected character {} at line {}",character,self.line))?,
         }
         Ok(())
