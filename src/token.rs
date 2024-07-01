@@ -1,4 +1,4 @@
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
     // Single-character tokens.
     LeftParen,
@@ -46,27 +46,26 @@ pub enum TokenType {
     Var,
     While,
 
-    Eof
+    Eof,
 }
 
-#[derive(Debug,Clone)]
-pub enum Object{
+#[derive(Debug, Clone, PartialEq)]
+pub enum Object {
     IntVal(i64),
     FloatVal(f64),
     StringVal(String),
     IdentifierVal(String),
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
     pub literal: Object,
-    pub line: usize, 
+    pub line: usize,
 }
 
 impl Token {
-
     pub fn to_string(&self) -> String {
         format!("{:?} {} {:?}", self.token_type, self.lexeme, self.literal)
     }
