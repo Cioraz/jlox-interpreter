@@ -52,45 +52,48 @@ impl Scanner {
             ';' => self.add_token(TokenType::Semicolon),
             '*' => self.add_token(TokenType::Star),
             '!' => {
-                match self.source.chars().nth(self.current) {
-                    Some('=') => {
-                        self.current+=1;
-                        self.add_token(TokenType::BangEqual);
-                    }
-                    _ => self.add_token(TokenType::Bang),
+                if self.char_match('='){
+                    self.add_token(TokenType::BangEqual);
+                }else{
+                    self.add_token(TokenType::Bang);
                 }
             },
             '=' => {
-                match self.source.chars().nth(self.current) {
-                    Some('=') => {
-                        self.current+=1;
-                        self.add_token(TokenType::EqualEqual);
-                    }
-                    _ => self.add_token(TokenType::Equal),
+                if self.char_match('='){
+                    self.add_token(TokenType::EqualEqual);
+                }else{
+                    self.add_token(TokenType::Equal);
                 }
             },
             '<' => {
-                match self.source.chars().nth(self.current) {
-                    Some('=') => {
-                        self.current+=1;
-                        self.add_token(TokenType::LessEqual);
-                    }
-                    _ => self.add_token(TokenType::Less),
+                if self.char_match('='){
+                    self.add_token(TokenType::LessEqual);
+                }else{
+                    self.add_token(TokenType::Less);
                 }
             },
             '>' => {
-                match self.source.chars().nth(self.current) {
-                    Some('=') => {
-                        self.current+=1;
-                        self.add_token(TokenType::GreaterEqual);
-                    }
-                    _ => self.add_token(TokenType::Greater),
+                if self.char_match('='){
+                    self.add_token(TokenType::GreaterEqual);
+                }else{
+                    self.add_token(TokenType::Greater);
                 }
             },
             _ => Err(format!("Unexpected character {} at line {}",character,self.line))?,
         }
         Ok(())
     
+    }
+
+    fn char_match(self: &mut Self, expected: char) -> bool{
+        if self.is_at_end(){
+            return false;
+        }
+        if self.source.chars().nth(self.current).unwrap() != expected{
+            return false;
+        }
+        self.current += 1;
+        true
     }
 
     // Initialize the scanner
