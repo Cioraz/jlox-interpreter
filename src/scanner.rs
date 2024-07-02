@@ -1,6 +1,19 @@
 // Scanner module for scanning the source code and converting it into tokens
 use crate::token::{Object, Token, TokenType};
 
+// HELPERS
+// Check if the character is a digit
+fn is_digit(character: char) -> bool{
+    character >= '0' && character <= '9'
+}
+
+fn is_alpha(character: char) -> bool{
+    return 
+        character>='a' && character<='z' ||
+        character>='A' && character<='Z' ||
+        character=='_'
+}
+
 // Scanner struct
 pub struct Scanner {
     source: String,
@@ -47,11 +60,6 @@ impl Scanner {
         self.source.chars().nth(self.current).unwrap()
     }
 
-    // Check if the character is a digit
-    fn is_digit(&self,character: char) -> bool{
-        character >= '0' && character <= '9'
-    }
-
     // Check the next character 
     fn peek_next(self: &Self) -> char {
         if self.current + 1 >= self.source.len() {
@@ -63,14 +71,14 @@ impl Scanner {
     // Scan for numbers
     fn number(self: &mut Self){
         let mut is_decimal = false;
-        while self.is_digit(self.peek()){
+        while is_digit(self.peek()){
             self.advance();
         }
 
-        if self.peek() == '.' && self.is_digit(self.peek_next()) {
+        if self.peek() == '.' && is_digit(self.peek_next()) {
             is_decimal=true;
             self.advance();
-            while self.is_digit(self.peek()){
+            while is_digit(self.peek()){
                 self.advance();
             }
         }
@@ -83,15 +91,10 @@ impl Scanner {
         }
     }
 
-    fn is_alpha(self: &Self, character: char) -> bool{
-        return 
-            character>='a' && character<='z' ||
-            character>='A' && character<='Z' ||
-            character=='_'
-    }
+    
 
     fn identifier(self: &mut Self,character: char) {
-        while self.is_alpha(character) || self.is_digit(character) {
+        while is_alpha(character) || is_digit(character) {
             self.advance();
         }
     }
@@ -173,9 +176,9 @@ impl Scanner {
                 );
             }
             _ => {
-                if self.is_digit(character) {
+                if is_digit(character) {
                     self.number();
-                } else if self.is_alpha(character) {
+                } else if is_alpha(character) {
                     self.identifier(character);
                 }
                 else{
