@@ -47,6 +47,39 @@ impl Scanner {
         self.source.chars().nth(self.current).unwrap()
     }
 
+    fn is_digit(&self,character: char) -> bool{
+        character >= '0' && character <= '9'
+    }
+
+    fn peek_next(self: &Self) -> char {
+        if self.current + 1 >= self.source.len() {
+            return '\0';
+        }
+        self.source.chars().nth(self.current + 1).unwrap()
+    }
+
+    fn number(self: &mut Self){
+        let mut is_decimal = false;
+        while self.is_digit(self.peek()){
+            self.advance();
+        }
+
+        if self.peek() == '.' && self.is_digit(self.peek_next()) {
+            is_decimal=true;
+            self.advance();
+            while self.is_digit(self.peek()){
+                self.advance();
+            }
+        }
+
+        let value = &self.source[self.start..self.current];
+        if is_decimal{
+            self.add_token_lit(TokenType::Number, Some(Object::FloatVal(value.parse().unwrap())));
+        }else{
+            self.add_token_lit(TokenType::Number, Some(Object::IntVal(value.parse().unwrap())));
+        }
+    }
+
     // Scan for tokens
     fn scan_token(self: &mut Self) -> Result<(), String> {
         let character = self.advance();
@@ -123,13 +156,18 @@ impl Scanner {
                     Some(Object::StringVal(value.to_string())),
                 );
             }
-            _ => Err(format!(
-                "Unexpected character {} at line {}",
-                character, self.line
-            ))?,
+            _ => {
+                if self.is_digit(character) {
+                    self.number();
+                } else{
+                    Err(format!("Unexpected character at line {}", self.line))?;
+                }
+            }
         }
         Ok(())
     }
+
+   
 
     fn char_match(self: &mut Self, expected: char) -> bool {
         if self.is_at_end() {
@@ -262,6 +300,26 @@ mod tests {
             tokens[0].literal,
             Object::StringVal("this is a string\nthis is another string".to_string())
         );
+        assert_eq!(tokens[1].token_type, TokenType::Eof);
+    }
+
+    #[test]
+    fn integer_number(){
+        let source = "123";
+        let mut scanner = Scanner::new(source);
+        let tokens = scanner.scan_tokens().unwrap();
+        assert_eq!(tokens.len(), 2);
+        assert_eq!(tokens[0].literal, Object::IntVal(123));
+        assert_eq!(tokens[1].token_type, TokenType::Eof);
+    }
+
+    #[test]
+    fn floating_number(){
+        let source = "123.123";
+        let mut scanner = Scanner::new(source);
+        let tokens = scanner.scan_tokens().unwrap();
+        assert_eq!(tokens.len(), 2);
+        assert_eq!(tokens[0].literal, Object::FloatVal(123.123));
         assert_eq!(tokens[1].token_type, TokenType::Eof);
     }
 }
