@@ -47,10 +47,12 @@ impl Scanner {
         self.source.chars().nth(self.current).unwrap()
     }
 
+    // Check if the character is a digit
     fn is_digit(&self,character: char) -> bool{
         character >= '0' && character <= '9'
     }
 
+    // Check the next character 
     fn peek_next(self: &Self) -> char {
         if self.current + 1 >= self.source.len() {
             return '\0';
@@ -58,6 +60,7 @@ impl Scanner {
         self.source.chars().nth(self.current + 1).unwrap()
     }
 
+    // Scan for numbers
     fn number(self: &mut Self){
         let mut is_decimal = false;
         while self.is_digit(self.peek()){
@@ -77,6 +80,19 @@ impl Scanner {
             self.add_token_lit(TokenType::Number, Some(Object::FloatVal(value.parse().unwrap())));
         }else{
             self.add_token_lit(TokenType::Number, Some(Object::IntVal(value.parse().unwrap())));
+        }
+    }
+
+    fn is_alpha(self: &Self, character: char) -> bool{
+        return 
+            character>='a' && character<='z' ||
+            character>='A' && character<='Z' ||
+            character=='_'
+    }
+
+    fn identifier(self: &mut Self,character: char) {
+        while self.is_alpha(character) || self.is_digit(character) {
+            self.advance();
         }
     }
 
@@ -159,7 +175,10 @@ impl Scanner {
             _ => {
                 if self.is_digit(character) {
                     self.number();
-                } else{
+                } else if self.is_alpha(character) {
+                    self.identifier(character);
+                }
+                else{
                     Err(format!("Unexpected character at line {}", self.line))?;
                 }
             }
@@ -321,5 +340,16 @@ mod tests {
         assert_eq!(tokens.len(), 2);
         assert_eq!(tokens[0].literal, Object::FloatVal(123.123));
         assert_eq!(tokens[1].token_type, TokenType::Eof);
+    }
+
+    #[test]
+    fn multiple_integer_literals_newlines(){
+        let source = "123\n123";
+        let mut scanner = Scanner::new(source);
+        let tokens = scanner.scan_tokens().unwrap();
+        assert_eq!(tokens.len(), 3);
+        assert_eq!(tokens[0].literal, Object::IntVal(123));
+        assert_eq!(tokens[1].literal, Object::IntVal(123));
+        assert_eq!(tokens[2].token_type, TokenType::Eof);
     }
 }
