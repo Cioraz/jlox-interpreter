@@ -7,6 +7,7 @@ fn is_digit(character: char) -> bool{
     character >= '0' && character <= '9'
 }
 
+// Check if the character is an alphabet
 fn is_alpha(character: char) -> bool{
     return 
         character>='a' && character<='z' ||
@@ -30,8 +31,8 @@ impl Scanner {
     }
 
     // Advance the current character
-    fn advance(self: &mut Self) -> char {
-        let character = self.source.chars().nth(self.current).unwrap();
+    fn advance(self: &mut Self) -> Option<char> {
+        let character = self.source.chars().nth(self.current);
         self.current += 1;
         character
     }
@@ -69,39 +70,63 @@ impl Scanner {
     }
 
     // Scan for numbers
-    fn number(self: &mut Self){
-        let mut is_decimal = false;
+    fn number(self: &mut Self) -> Result<(), String>{
         while is_digit(self.peek()){
             self.advance();
         }
 
         if self.peek() == '.' && is_digit(self.peek_next()) {
-            is_decimal=true;
             self.advance();
             while is_digit(self.peek()){
                 self.advance();
             }
         }
 
-        let value = &self.source[self.start..self.current];
-        if is_decimal{
-            self.add_token_lit(TokenType::Number, Some(Object::FloatVal(value.parse().unwrap())));
-        }else{
-            self.add_token_lit(TokenType::Number, Some(Object::IntVal(value.parse().unwrap())));
+        let string_val = &self.source[self.start..self.current];
+        let value = string_val.parse::<f64>();
+        match value {
+            Ok(val) => {
+                self.add_token_lit(TokenType::Number, Some(Object::FloatVal(val)));
+                Ok(())
+            }
+            Err(_) => Err(format!("Invalid number at line {}", self.line)),
         }
     }
-
     
+    fn identifier(self: &mut Self) -> Result<(),String>{
+        while is_alpha(self.peek()) || is_digit(self.peek()) {
+            self.advance();
+        } 
+        self.add_token_lit(
+            TokenType::Identifier,
+            Some(Object::IdentifierVal(self.source[self.start..self.current].to_string())),
+        );
+        Ok(())
+    }
 
-    fn identifier(self: &mut Self,character: char) {
-        while is_alpha(character) || is_digit(character) {
+    fn string(self : &mut Self) -> Result<(),String> {
+        while self.peek() != '"' && !self.is_at_end() {
+            if self.peek() == '\n' {
+                self.line += 1;
+            }
             self.advance();
         }
+        if self.is_at_end() {
+            Err(format!("Unterminated string at line {}", self.line))?;
+        }
+        // advance the closing "
+        self.advance();
+        let value = &self.source[self.start + 1..self.current - 1];
+        self.add_token_lit(
+            TokenType::String,
+            Some(Object::StringVal(value.to_string())),
+        );
+        Ok(())
     }
 
     // Scan for tokens
     fn scan_token(self: &mut Self) -> Result<(), String> {
-        let character = self.advance();
+        if let Some(character) = self.advance(){
         match character {
             '(' => self.add_token(TokenType::LeftParen),
             ')' => self.add_token(TokenType::RightParen),
@@ -158,33 +183,19 @@ impl Scanner {
                 }
             }
             '"' => {
-                while self.peek() != '"' && !self.is_at_end() {
-                    if self.peek() == '\n' {
-                        self.line += 1;
-                    }
-                    self.advance();
-                }
-                if self.is_at_end() {
-                    Err(format!("Unterminated string at line {}", self.line))?;
-                }
-                // advance the closing "
-                self.advance();
-                let value = &self.source[self.start + 1..self.current - 1];
-                self.add_token_lit(
-                    TokenType::String,
-                    Some(Object::StringVal(value.to_string())),
-                );
+                self.string()?; 
             }
             _ => {
                 if is_digit(character) {
-                    self.number();
+                    self.number()?;
                 } else if is_alpha(character) {
-                    self.identifier(character);
+                    self.identifier()?;
                 }
                 else{
                     Err(format!("Unexpected character at line {}", self.line))?;
                 }
             }
+        }
         }
         Ok(())
     }
@@ -331,7 +342,7 @@ mod tests {
         let mut scanner = Scanner::new(source);
         let tokens = scanner.scan_tokens().unwrap();
         assert_eq!(tokens.len(), 2);
-        assert_eq!(tokens[0].literal, Object::IntVal(123));
+        assert_eq!(tokens[0].literal, Object::FloatVal(123.0));
         assert_eq!(tokens[1].token_type, TokenType::Eof);
     }
 
@@ -351,8 +362,19 @@ mod tests {
         let mut scanner = Scanner::new(source);
         let tokens = scanner.scan_tokens().unwrap();
         assert_eq!(tokens.len(), 3);
-        assert_eq!(tokens[0].literal, Object::IntVal(123));
-        assert_eq!(tokens[1].literal, Object::IntVal(123));
+        assert_eq!(tokens[0].literal, Object::FloatVal(123.0));
+        assert_eq!(tokens[1].literal, Object::FloatVal(123.0));
+        assert_eq!(tokens[2].token_type, TokenType::Eof);
+    }
+
+    #[test]
+    fn identifiers(){
+        let source = "hello world";
+        let mut scanner = Scanner::new(source);
+        let tokens = scanner.scan_tokens().unwrap();
+        assert_eq!(tokens.len(), 3);
+        assert_eq!(tokens[0].literal, Object::IdentifierVal("hello".to_string()));
+        assert_eq!(tokens[1].literal, Object::IdentifierVal("world".to_string()));
         assert_eq!(tokens[2].token_type, TokenType::Eof);
     }
 }
