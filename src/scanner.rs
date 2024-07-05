@@ -212,7 +212,20 @@ impl Scanner {
                         }
                         self.advance();
                     }
-                } else {
+                } else if self.char_match('*'){
+                    loop {
+                        if self.peek() == '*' && self.peek_next() == '/' {
+                            self.advance();
+                            self.advance();
+                            break;
+                        }
+                        if self.peek() == '\n' {
+                            self.line += 1;
+                        }
+                        self.advance();
+                    }
+                }
+                else {
                     self.add_token(TokenType::Slash);
                 }
             }
@@ -458,6 +471,14 @@ mod tests {
         assert_eq!(tokens[11].token_type, TokenType::Semicolon);
         assert_eq!(tokens[12].token_type, TokenType::Eof);
 
+    }
+
+    fn multiline_comment(){
+        let source = "/* this is a multiline comment */";
+        let mut scanner = Scanner::new(source);
+        let tokens = scanner.scan_tokens().unwrap();
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(tokens[0].token_type, TokenType::Eof);
     }
 
 }
