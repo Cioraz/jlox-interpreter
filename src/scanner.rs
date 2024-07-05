@@ -1,5 +1,28 @@
 // Scanner module for scanning the source code and converting it into tokens
 use crate::token::{Object, Token, TokenType};
+use std::collections::HashMap;
+
+fn get_keywords_from_hashmap() -> HashMap<&'static str,TokenType> {
+    HashMap::from([
+        ("and", TokenType::And),
+        ("class", TokenType::Class),
+        ("else", TokenType::Else),
+        ("false", TokenType::False),
+        ("fn", TokenType::Fn),
+        ("for", TokenType::For),
+        ("if", TokenType::If),
+        ("nil", TokenType::Nil),
+        ("or", TokenType::Or),
+        ("print", TokenType::Print),
+        ("return", TokenType::Return),
+        ("super", TokenType::Super),
+        ("this", TokenType::This),
+        ("true", TokenType::True),
+        ("var", TokenType::Var),
+        ("while", TokenType::While),
+    ])
+}
+
 
 // HELPERS
 // Check if the character is a digit
@@ -22,6 +45,7 @@ pub struct Scanner {
     start: usize,
     current: usize,
     line: usize,
+    keywords: HashMap<&'static str, TokenType>,
 }
 
 impl Scanner {
@@ -97,10 +121,20 @@ impl Scanner {
         while is_alpha(self.peek()) || is_digit(self.peek()) {
             self.advance();
         } 
-        self.add_token_lit(
-            TokenType::Identifier,
-            Some(Object::IdentifierVal(self.source[self.start..self.current].to_string())),
-        );
+
+        let val = &self.source[self.start..self.current];
+        let is_keyword_then_value = match get_keywords_from_hashmap().get(val){
+            Some(token) => token.clone(),
+            None => TokenType::Identifier,
+        };
+        match is_keyword_then_value {
+            TokenType::Identifier => {
+                self.add_token_lit(TokenType::Identifier, Some(Object::IdentifierVal(val.to_string())));
+            }
+            _ => {
+                self.add_token(is_keyword_then_value);
+            }
+        }
         Ok(())
     }
 
@@ -221,6 +255,7 @@ impl Scanner {
             start: 0,
             current: 0,
             line: 1,
+            keywords: get_keywords_from_hashmap(),
         }
     }
 
@@ -377,4 +412,52 @@ mod tests {
         assert_eq!(tokens[1].literal, Object::IdentifierVal("world".to_string()));
         assert_eq!(tokens[2].token_type, TokenType::Eof);
     }
+
+    #[test]
+    fn keywords(){
+        let source = "and class else false fn for if nil or print return super this true var while";
+        let mut scanner = Scanner::new(source);
+        let tokens = scanner.scan_tokens().unwrap();
+        assert_eq!(tokens.len(), 17);
+        assert_eq!(tokens[0].token_type, TokenType::And);
+        assert_eq!(tokens[1].token_type, TokenType::Class);
+        assert_eq!(tokens[2].token_type, TokenType::Else);
+        assert_eq!(tokens[3].token_type, TokenType::False);
+        assert_eq!(tokens[4].token_type, TokenType::Fn);
+        assert_eq!(tokens[5].token_type, TokenType::For);
+        assert_eq!(tokens[6].token_type, TokenType::If);
+        assert_eq!(tokens[7].token_type, TokenType::Nil);
+        assert_eq!(tokens[8].token_type, TokenType::Or);
+        assert_eq!(tokens[9].token_type, TokenType::Print);
+        assert_eq!(tokens[10].token_type, TokenType::Return);
+        assert_eq!(tokens[11].token_type, TokenType::Super);
+        assert_eq!(tokens[12].token_type, TokenType::This);
+        assert_eq!(tokens[13].token_type, TokenType::True);
+        assert_eq!(tokens[14].token_type, TokenType::Var);
+        assert_eq!(tokens[15].token_type, TokenType::While);
+        assert_eq!(tokens[16].token_type, TokenType::Eof);
+    }
+
+    #[test]
+    fn complete_test(){
+        let source = "var this_is_var = 12;\nwhile true {print 3};";
+        let mut scanner = Scanner::new(source);
+        let tokens = scanner.scan_tokens().unwrap();
+        assert_eq!(tokens.len(), 13);
+        assert_eq!(tokens[0].token_type, TokenType::Var);
+        assert_eq!(tokens[1].literal, Object::IdentifierVal("this_is_var".to_string()));
+        assert_eq!(tokens[2].token_type, TokenType::Equal);
+        assert_eq!(tokens[3].literal, Object::FloatVal(12.0));
+        assert_eq!(tokens[4].token_type, TokenType::Semicolon);
+        assert_eq!(tokens[5].token_type, TokenType::While);
+        assert_eq!(tokens[6].token_type, TokenType::True);
+        assert_eq!(tokens[7].token_type, TokenType::LeftBrace);
+        assert_eq!(tokens[8].token_type, TokenType::Print);
+        assert_eq!(tokens[9].literal, Object::FloatVal(3.0));
+        assert_eq!(tokens[10].token_type, TokenType::RightBrace);
+        assert_eq!(tokens[11].token_type, TokenType::Semicolon);
+        assert_eq!(tokens[12].token_type, TokenType::Eof);
+
+    }
+
 }
